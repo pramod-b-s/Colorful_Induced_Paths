@@ -100,16 +100,17 @@ def get_color_map(chiListret):
 	return col_map_ret
 
 
-dirname="op"
-plotdirname="plots"
+dirname=str(dt.date.today())
+plotdirname=str("plots"+str(dt.datetime.now().time()))
 csvname="my_graphs.csv"
+
+if not os.path.exists(dirname): 
+	os.makedirs(dirname)
 
 plotpath=os.path.join(dirname,plotdirname)
 csvpath=os.path.join(dirname,csvname)
 
-if not os.path.exists(dirname): 
-	os.makedirs(dirname)
-	os.makedirs(plotpath)
+os.makedirs(plotpath)
 
 # n=random.randint(10,50)
 # lwr=n
@@ -131,7 +132,7 @@ nlow=2
 nhigh=50
 
 num_g_till_now=0
-num_g_total=1
+num_g_total=100
 total_graph_generated=0
 
 ## available colors
@@ -155,7 +156,7 @@ for vertice_iterator in range(nlow,nhigh):
 
 		itr=0
 		# num_g=ncr(mhigh,m)
-		num_g=50
+		num_g=500
 		
 		print("\nnumber of vertices : "+str(n)+"\tnumber of edges : "+str(m)+"\n")
 
@@ -198,11 +199,14 @@ for vertice_iterator in range(nlow,nhigh):
 				print("removing triangles causes disconnection!")
 				continue
 			
-			cycl_list=nx.cycle_basis(graph, 0)
+			# cycl_list=nx.cycle_basis(graph, 0)
+			cycl_list=nx.minimum_cycle_basis(graph)
 
 			if(len(cycl_list)):
-				girthObtained=len(min(cycl_list, key=len))
-				girthCycle=min(cycl_list, key=len)
+				# girthObtained=len(min(cycl_list, key=len))
+				girthObtained=len(cycl_list[0])
+				girthCycle=cycl_list[0]
+				# girthCycle=min(cycl_list, key=len)
 				print("girth = "+str(girthObtained))
 			else:
 				print("no cycles")
@@ -233,8 +237,8 @@ for vertice_iterator in range(nlow,nhigh):
 				gnp=nx.to_numpy_matrix(graph,dtype="int")
 				g=np.ndarray.tolist(gnp)
 
-				n=graph.number_of_nodes()
-				chiList=get_chi_list(g,n,chi)
+				ncopy=graph.number_of_nodes()
+				chiList=get_chi_list(g,ncopy,chi)
 				chiObtained=max(chiList)
 				print("chromatic number of graph now is "+str(chiObtained))
 
@@ -245,7 +249,7 @@ for vertice_iterator in range(nlow,nhigh):
 			# nodes_list=graph.nodes()
 			# print(nodes_list)
 			# print(n)
-			nodes_list=list(range(n))
+			nodes_list=list(range(ncopy))
 			# print(nodes_list)
 			all_k_ele_list=get_k_combs(nodes_list, chi)
 
@@ -272,34 +276,69 @@ for vertice_iterator in range(nlow,nhigh):
 				exit(0)
 
 
-			print("optimising graph for clear figure")
-			edge_list=graph.edges()
-			print(edge_list)
+			gnp=nx.to_numpy_matrix(graph,dtype="int")
+			g=np.ndarray.tolist(gnp)			
 
-			ind_set_list=[]
+			print("graph "+str(num_g_till_now+1)+" generated")
+			print(gnp)
 
-			for lbl in range(1,chi+1):
-				indset_tmp_list=[]
+			df = pd.DataFrame(data=gnp.astype(np.int))
 
-				for idx,val in enumerate(chiList):
-					if (val==lbl):
-						indset_tmp_list.append(idx)
+			with open(csvpath, 'a') as f:
+			    df.to_csv(f, header=False)
 
-				ind_set_list.append(indset_tmp_list)
 
-			print(ind_set_list)
+			gpos = nx.nx_agraph.graphviz_layout(graph, prog='neato')
+			# nx.draw_networkx(graph,pos=gpos) 
+
+			sprpos=nx.spring_layout(graph,k=0.1,iterations=50)
+
+			nx.draw(graph,pos=gpos, node_color=color_map, with_labels=True)
+			# nx.draw(graph,pos=sprpos, node_color=color_map, with_labels=True)
+
+			# plt.show()
+			plt.savefig(os.path.join(plotpath,str(num_g_till_now)))
+			plt.clf()
+
+			num_g_till_now=num_g_till_now+1
+
+			if(num_g_till_now==num_g_total):
+				print(str(num_g_total)+" graphs generated\n")
+				exit(0)
+		
+
+
+
+
+
+			# print("optimising graph for clear figure")
+			# edge_list=graph.edges()
+			# print(edge_list)
+
+			# ind_set_list=[]
+
+			# for lbl in range(1,chi+1):
+			# 	indset_tmp_list=[]
+
+			# 	for idx,val in enumerate(chiList):
+			# 		if (val==lbl):
+			# 			indset_tmp_list.append(idx)
+
+			# 	ind_set_list.append(indset_tmp_list)
+
+			# print(ind_set_list)
 			
-			tmpgrth=[]
-			tmpgrth.append(girthCycle)
+			# tmpgrth=[]
+			# tmpgrth.append(girthCycle)
 			
-			edges = [zip(nodes,(nodes[1:]+nodes[:1])) for nodes in tmpgrth]
-			edgesmod=edges[0]
-			nec_edges=[]
-			for edgsmp in edgesmod:
-				lstedg=list(edgsmp)
-				lstedg.sort()
-				tpledg=tuple(lstedg)
-				nec_edges.append(tpledg)
+			# edges = [zip(nodes,(nodes[1:]+nodes[:1])) for nodes in tmpgrth]
+			# edgesmod=edges[0]
+			# nec_edges=[]
+			# for edgsmp in edgesmod:
+			# 	lstedg=list(edgsmp)
+			# 	lstedg.sort()
+			# 	tpledg=tuple(lstedg)
+			# 	nec_edges.append(tpledg)
 
 			# for u in range(0,len(ind_set_list)):
 			# 	for v in range(u+1,len(ind_set_list)):
@@ -386,38 +425,4 @@ for vertice_iterator in range(nlow,nhigh):
 			# 			print("chi not violated")
 			# 			print("removed edge "+str(edg))
 			# 			graph=mod_graph
-
-
-			gnp=nx.to_numpy_matrix(graph,dtype="int")
-			g=np.ndarray.tolist(gnp)			
-
-			print("graph "+str(num_g_till_now+1)+" generated")
-			print(gnp)
-
-			df = pd.DataFrame(data=gnp.astype(np.int))
-
-			with open(csvpath, 'a') as f:
-			    df.to_csv(f, header=False)
-
-## TO SOLVE : COMPROMISE BETWEEN COLORED NODES AND FINDING COLOR LIST FOR CHI 5
-
-			gpos = nx.nx_agraph.graphviz_layout(graph, prog='neato')
-			# nx.draw_networkx(graph,pos=gpos) 
-
-			sprpos=nx.spring_layout(graph,k=0.1,iterations=50)
-
-			nx.draw(graph,pos=gpos, node_color=color_map, with_labels=True)
-			# nx.draw(graph,pos=sprpos, node_color=color_map, with_labels=True)
-
-			# plt.show()
-			# plt.savefig("output30/plots/"+"_n_"+str(n)+"_m_"+str(m)+"_chi_"+str(chi)+"_g_"+str(girth)+".jpg")
-			plt.savefig(os.path.join(plotpath,str(num_g_till_now)))
-			plt.clf()
-
-			num_g_till_now=num_g_till_now+1
-
-			if(num_g_till_now==num_g_total):
-				print(str(num_g_total)+" graphs generated\n")
-				exit(0)
-		
 
